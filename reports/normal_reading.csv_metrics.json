@@ -1,0 +1,25 @@
+{
+    "saccades": {
+        "count": 235,
+        "mean_velocity": 1920.393907263304,
+        "mean_duration": 0.22411795744680854
+    },
+    "fixations": {
+        "count": 2,
+        "mean_duration": 0.10833550000000002,
+        "total_duration": 0.21667100000000003
+    },
+    "pupil": {
+        "mean_left_size": 3.10448431545626,
+        "mean_right_size": 3.1027380562011118,
+        "std_left_size": 0.4991988522740125,
+        "std_right_size": 0.49591054819249375,
+        "dilation_events": 184
+    },
+    "aois": {
+        "top_left": 0.0,
+        "top_right": 0.0,
+        "bottom_left": 0.0,
+        "bottom_right": 19.833730000000003
+    }
+}
