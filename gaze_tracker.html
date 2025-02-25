@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gaze Tracking Interface</title>
-    <script src="https://app.gazerecorder.com/GazeRecorderAPI.js"></script>
+    <script src="https://api.gazerecorder.com/GazeCloudAPI.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
@@ -284,16 +284,36 @@
             }
         }
 
-        function startTracking() {
+        async function startTracking() {
             const url = document.getElementById('urlInput').value.trim();
             const status = document.getElementById('status');
             
             try {
-                if (url) {
-                    GazeRecorderAPI.Rec(url);
-                } else {
-                    GazeRecorderAPI.Rec();
+                // Request necessary permissions first
+                try {
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                } catch (err) {
+                    throw new Error('Camera permission is required for gaze tracking');
                 }
+
+                // If URL is provided, we need screen capture permission
+                if (url) {
+                    try {
+                        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                            video: {
+                                cursor: "always"
+                            },
+                            audio: false
+                        });
+                        // Stop the stream right away, GazeRecorder will request it again
+                        screenStream.getTracks().forEach(track => track.stop());
+                    } catch (err) {
+                        throw new Error('Screen sharing permission is required for URL tracking');
+                    }
+                }
+
+                // Start the GazeCloud tracker
+                GazeCloudAPI.StartEyeTracking();
                 
                 isRecording = true;
                 status.textContent = 'Recording...';
@@ -304,6 +324,7 @@
                 document.getElementById('saveBtn').disabled = true;
             } catch (error) {
                 status.textContent = 'Error starting tracking: ' + error.message;
+                console.error('Tracking error:', error);
             }
         }
 
@@ -311,7 +332,7 @@
             const status = document.getElementById('status');
             
             try {
-                GazeRecorderAPI.StopRec();
+                GazeCloudAPI.StopEyeTracking();
                 
                 isRecording = false;
                 status.textContent = 'Recording stopped. Ready to save data.';
@@ -400,23 +421,35 @@
             return csv;
         }
 
-        // GazeRecorder API event handlers
-        GazeRecorderAPI.OnRecordingStarted = function() {
-            console.log('Recording started successfully');
+        // GazeCloud API event handlers
+        GazeCloudAPI.OnCalibrationComplete = function() {
+            console.log('Calibration complete');
         };
 
-        GazeRecorderAPI.OnRecordingStopped = function() {
-            console.log('Recording stopped successfully');
+        GazeCloudAPI.OnCamDenied = function() {
+            console.error('Camera access denied');
+            document.getElementById('status').textContent = 'Error: Camera access denied';
         };
 
-        GazeRecorderAPI.OnError = function(error) {
-            console.error('GazeRecorder error:', error);
+        GazeCloudAPI.OnError = function(error) {
+            console.error('GazeCloud error:', error);
             document.getElementById('status').textContent = 'Error: ' + error;
         };
 
-        GazeRecorderAPI.OnResult = function(gazeData) {
-            sessionData.push(gazeData);
-            updateVisualization(gazeData);
+        GazeCloudAPI.OnResult = function(gazeData) {
+            sessionData.push({
+                timestamp: Date.now(),
+                leftEye: { x: gazeData.Left_Eye_X, y: gazeData.Left_Eye_Y },
+                rightEye: { x: gazeData.Right_Eye_X, y: gazeData.Right_Eye_Y },
+                gaze: { x: gazeData.docX, y: gazeData.docY },
+                headPose: { 
+                    x: gazeData.Head_Pitch, 
+                    y: gazeData.Head_Yaw, 
+                    z: gazeData.Head_Roll 
+                },
+                blink: gazeData.state !== 0  // 0 means eyes detected
+            });
+            updateVisualization(sessionData[sessionData.length - 1]);
         };
     </script>
 </body>
