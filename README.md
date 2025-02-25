@@ -17,12 +17,14 @@ This system allows you to track and analyze user gaze data using the GazeCloud A
 ## Setup
 
 1. Clone this repository:
+
 ```bash
 git clone https://github.com/yourusername/gaze-tracking-system.git
 cd gaze-tracking-system
 ```
 
 2. Install required Python packages:
+
 ```bash
 pip install pandas numpy matplotlib seaborn
 ```
@@ -32,6 +34,7 @@ pip install pandas numpy matplotlib seaborn
 ### Recording Gaze Data
 
 1. Start the tracking server:
+
 ```bash
 python server.py
 ```
@@ -56,6 +59,7 @@ python server.py
 1. Place your recorded gaze data CSV file in the `data/examples/` directory.
 
 2. Run the analysis script:
+
 ```bash
 python gaze.py
 ```
@@ -72,6 +76,7 @@ python gaze.py
 ## Data Format
 
 The recorded CSV files contain the following columns:
+
 - timestamp: ISO format timestamp
 - frame_number: Sequential frame counter
 - left_eye_x, left_eye_y: Left eye position
@@ -85,6 +90,7 @@ The recorded CSV files contain the following columns:
 ## Analysis Parameters
 
 You can adjust various parameters in the `gaze.py` script:
+
 - Saccade detection thresholds
 - Fixation detection parameters
 - Blink detection sensitivity
