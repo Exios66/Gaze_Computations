@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaze Recording Session</title>
+    <script src="https://app.gazerecorder.com/GazeRecorderAPI.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .status-panel {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+        .recording {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        #startBtn {
+            background-color: #4caf50;
+            color: white;
+        }
+        #stopBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        #downloadBtn {
+            background-color: #2196f3;
+            color: white;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .data-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gaze Recording Session</h1>
+        <div class="status-panel" id="status">
+            Ready to start recording
+        </div>
+        <div>
+            <button id="startBtn" onclick="startRecording()">Start Recording</button>
+            <button id="stopBtn" onclick="stopRecording()" disabled>Stop Recording</button>
+            <button id="downloadBtn" onclick="downloadData()" disabled>Download Data</button>
+        </div>
+        <div class="data-display" id="dataDisplay">
+            No data recorded yet
+        </div>
+    </div>
+
+    <script>
+        let recordingData = null;
+        const defaultTrackingUrl = 'https://exios66.github.io/Gaze_Computations/';
+
+        function startRecording() {
+            try {
+                // Start recording with the default tracking URL
+                GazeRecorderAPI.Rec(defaultTrackingUrl);
+                
+                document.getElementById('status').textContent = 'Recording in progress... Tracking: ' + defaultTrackingUrl;
+                document.getElementById('status').classList.add('recording');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('downloadBtn').disabled = true;
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error starting recording: ' + error.message;
+            }
+        }
+
+        function stopRecording() {
+            try {
+                GazeRecorderAPI.StopRec();
+                recordingData = GazeRecorderAPI.GetRecData();
+                
+                document.getElementById('status').textContent = 'Recording stopped. Data ready for download.';
+                document.getElementById('status').classList.remove('recording');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('downloadBtn').disabled = false;
+                
+                // Display summary of recorded data
+                const summary = {
+                    timestamp: new Date().toISOString(),
+                    dataPoints: recordingData.length,
+                    duration: (recordingData[recordingData.length - 1].timestamp - recordingData[0].timestamp) / 1000 + ' seconds'
+                };
+                document.getElementById('dataDisplay').textContent = JSON.stringify(summary, null, 2);
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error stopping recording: ' + error.message;
+            }
+        }
+
+        function downloadData() {
+            if (!recordingData) {
+                alert('No recording data available');
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `gaze_recording_${timestamp}.json`;
+            
+            const blob = new Blob([JSON.stringify(recordingData, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // GazeRecorder API event handlers
+        GazeRecorderAPI.OnRecordingStarted = function() {
+            console.log('Recording started successfully');
+        };
+
+        GazeRecorderAPI.OnRecordingStopped = function() {
+            console.log('Recording stopped successfully');
+        };
+
+        GazeRecorderAPI.OnError = function(error) {
+            console.error('GazeRecorder error:', error);
+            document.getElementById('status').textContent = 'Error: ' + error;
+        };
+    </script>
+</body>
+</html> 
