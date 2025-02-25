@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaze Tracking Interface</title>
+    <script src="https://app.gazerecorder.com/GazeRecorderAPI.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .recording {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #startBtn {
+            background-color: #4caf50;
+            color: white;
+        }
+        #stopBtn {
+            background-color: #f44336;
+            color: white;
+        }
+        #saveBtn {
+            background-color: #2196f3;
+            color: white;
+        }
+        #urlInput {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <div id="status" class="status">Ready to start tracking</div>
+        <input type="text" id="urlInput" placeholder="Enter URL to track (optional)">
+        <button id="startBtn" onclick="startTracking()">Start Tracking</button>
+        <button id="stopBtn" onclick="stopTracking()" disabled>Stop Tracking</button>
+        <button id="saveBtn" onclick="saveData()" disabled>Save Data</button>
+    </div>
+
+    <script>
+        let isRecording = false;
+        let sessionData = null;
+
+        function startTracking() {
+            const url = document.getElementById('urlInput').value.trim();
+            const status = document.getElementById('status');
+            
+            try {
+                if (url) {
+                    GazeRecorderAPI.Rec(url);
+                } else {
+                    GazeRecorderAPI.Rec();
+                }
+                
+                isRecording = true;
+                status.textContent = 'Recording...';
+                status.classList.add('recording');
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('saveBtn').disabled = true;
+                document.getElementById('urlInput').disabled = true;
+            } catch (error) {
+                status.textContent = 'Error starting tracking: ' + error.message;
+            }
+        }
+
+        function stopTracking() {
+            const status = document.getElementById('status');
+            
+            try {
+                GazeRecorderAPI.StopRec();
+                sessionData = GazeRecorderAPI.GetRecData();
+                
+                isRecording = false;
+                status.textContent = 'Recording stopped. Ready to save data.';
+                status.classList.remove('recording');
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('saveBtn').disabled = false;
+                document.getElementById('urlInput').disabled = false;
+            } catch (error) {
+                status.textContent = 'Error stopping tracking: ' + error.message;
+            }
+        }
+
+        function saveData() {
+            if (!sessionData) {
+                alert('No recording data available to save');
+                return;
+            }
+
+            // Convert session data to CSV format
+            const csvData = convertToCSV(sessionData);
+            
+            // Create timestamp for filename
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            
+            // Create and trigger download
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gaze_recording_${timestamp}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        function convertToCSV(data) {
+            // Convert GazeRecorder data format to our CSV format
+            let csv = 'timestamp,frame_number,left_eye_x,left_eye_y,right_eye_x,right_eye_y,left_pupil_size,right_pupil_size,left_blink,right_blink,gaze_x,gaze_y,head_pose_x,head_pose_y,head_pose_z,marker\n';
+            
+            data.forEach((record, index) => {
+                const row = [
+                    new Date(record.timestamp).toISOString(),
+                    index,
+                    record.leftEye ? record.leftEye.x : 0,
+                    record.leftEye ? record.leftEye.y : 0,
+                    record.rightEye ? record.rightEye.x : 0,
+                    record.rightEye ? record.rightEye.y : 0,
+                    record.leftPupil ? record.leftPupil.size : 0,
+                    record.rightPupil ? record.rightPupil.size : 0,
+                    record.blink ? 1 : 0,
+                    record.blink ? 1 : 0,
+                    record.gaze ? record.gaze.x : 0,
+                    record.gaze ? record.gaze.y : 0,
+                    record.headPose ? record.headPose.x : 0,
+                    record.headPose ? record.headPose.y : 0,
+                    record.headPose ? record.headPose.z : 0,
+                    record.marker || ''
+                ].join(',');
+                csv += row + '\n';
+            });
+            
+            return csv;
+        }
+
+        // Optional: Add event listeners for GazeRecorder API events
+        GazeRecorderAPI.OnRecordingStarted = function() {
+            console.log('Recording started successfully');
+        };
+
+        GazeRecorderAPI.OnRecordingStopped = function() {
+            console.log('Recording stopped successfully');
+        };
+
+        GazeRecorderAPI.OnError = function(error) {
+            console.error('GazeRecorder error:', error);
+            document.getElementById('status').textContent = 'Error: ' + error;
+        };
+    </script>
+</body>
+</html> 
